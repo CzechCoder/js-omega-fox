@@ -39,9 +39,8 @@ const treesImage = new Image();
 treesImage.src = "image/bg_trees.png";
 
 const finishFlagImage = new Image();
-finishFlagImage.src = "image/finish_flag.png"; // Replace with your image path
+finishFlagImage.src = "image/finish_flag.png";
 
-// Tiles
 const groundTile = new Image();
 groundTile.src = "image/tile_ground.png";
 
@@ -142,10 +141,10 @@ function createEnemies() {
 let enemies = createEnemies();
 
 const finishPoint = {
-  x: 2800, // Change to your desired x-coordinate
-  y: VIRTUAL_HEIGHT - 282, // Adjust to match the ground level
-  width: 114, // Set the width of the flag image
-  height: 235, // Set the height of the flag image
+  x: 2800,
+  y: VIRTUAL_HEIGHT - 282,
+  width: 114,
+  height: 235,
 };
 
 // Controls
@@ -169,7 +168,7 @@ window.addEventListener("keydown", (e) => {
     if (gameWon || gameOver) {
       gameOver = false;
       gameWon = false;
-      player.x = 100; // Reset player position
+      player.x = 100;
       player.y = VIRTUAL_HEIGHT - 150;
       player.vy = 0;
       player.image = playerIdleImage;
@@ -182,8 +181,6 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => (keys[e.key] = false));
 
 // Functions
-
-// Update enemies (simple walking back and forth)
 function updateEnemies(deltaTime) {
   for (let enemy of enemies) {
     if (!enemy.alive) continue;
@@ -194,7 +191,7 @@ function updateEnemies(deltaTime) {
         enemy.exploding = false;
         enemy.alive = false;
         enemy.image = enemyGravestoneImage;
-        enemy.speed = 0; // stop moving
+        enemy.speed = 0;
         enemy.width = 85;
         enemy.height = 93;
         enemy.y = VIRTUAL_HEIGHT - 140;
@@ -218,17 +215,16 @@ function updateEnemies(deltaTime) {
 // Shooting
 function shootBullet() {
   bullets.push({
-    x: player.facingLeft ? player.x - 10 : player.x + player.width - 10, // adjust origin based on facing
+    x: player.facingLeft ? player.x - 10 : player.x + player.width - 10,
     y: player.y + player.height / 2 - 25,
     width: 20,
     height: 10,
     color: "orange",
     speed: bulletSpeed,
-    direction: player.facingLeft ? -1 : 1, // NEW: direction
+    direction: player.facingLeft ? -1 : 1,
   });
 }
 
-// Is finish?
 // Check if player reaches the finish point
 function checkFinish() {
   const flagX = finishPoint.x;
@@ -250,9 +246,9 @@ function checkFinish() {
 }
 
 function drawGameOver() {
-  ctx.fillStyle = "rgba(0, 0, 0, 0.7)"; // Dark overlay
+  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
   ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-  ctx.fillStyle = "white"; // Text color
+  ctx.fillStyle = "white";
   ctx.font = "48px Arial";
   ctx.textAlign = "center";
   ctx.fillText(
@@ -287,7 +283,6 @@ function update(deltaTime) {
 
   const moveSpeed = player.speed * deltaTime * 60;
 
-  // Horizontal movement
   if (keys["ArrowLeft"]) {
     player.x -= moveSpeed;
     player.facingLeft = true;
@@ -419,7 +414,7 @@ function draw() {
   ctx.clearRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
   // Draw background
-  ctx.fillStyle = "#a0d8f1"; // Light blue sky color
+  ctx.fillStyle = "#a0d8f1";
   ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
   ctx.drawImage(treesImage, -cameraX * 0.2, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
@@ -487,7 +482,7 @@ function draw() {
 }
 
 function gameLoop(currentTime) {
-  const deltaTime = (currentTime - lastTime) / 1000; // convert ms to seconds
+  const deltaTime = (currentTime - lastTime) / 1000;
   lastTime = currentTime;
 
   update(deltaTime);
