@@ -50,6 +50,9 @@ platformTile.src = "image/tile_platform.png";
 const playerWalkImage = new Image();
 playerWalkImage.src = "image/player_walk1.png";
 
+const enemyImage = new Image();
+enemyImage.src = "image/enemy_robot1.png";
+
 // Player
 const player = {
   x: 100,
@@ -65,6 +68,47 @@ const player = {
   facingLeft: false,
   image: playerIdleImage,
 };
+
+// Enemies
+const enemy_type1 = {
+  width: 180,
+  height: 193,
+};
+
+const enemies = [
+  {
+    x: 500,
+    y: VIRTUAL_HEIGHT - 242,
+    ...enemy_type1,
+    speed: 1, // Speed of enemy movement
+    direction: 1, // 1 for moving right, -1 for moving left
+    image: enemyImage,
+  },
+  {
+    x: 1000,
+    y: VIRTUAL_HEIGHT - 242,
+    ...enemy_type1,
+    speed: 1,
+    direction: -1,
+    image: enemyImage,
+  },
+  {
+    x: 1300,
+    y: VIRTUAL_HEIGHT - 242,
+    ...enemy_type1,
+    speed: 1,
+    direction: -1,
+    image: enemyImage,
+  },
+  {
+    x: 1800,
+    y: VIRTUAL_HEIGHT - 242,
+    ...enemy_type1,
+    speed: 1,
+    direction: -1,
+    image: enemyImage,
+  },
+];
 
 const finishPoint = {
   x: 2800, // Change to your desired x-coordinate
@@ -108,6 +152,20 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => (keys[e.key] = false));
 
 // Functions
+
+// Update enemies (simple walking back and forth)
+function updateEnemies(deltaTime) {
+  for (let enemy of enemies) {
+    enemy.x += enemy.speed * enemy.direction * deltaTime * 60; // Move the enemy
+
+    // Check for boundary and change direction
+    if (enemy.x <= 0 || enemy.x + enemy.width >= VIRTUAL_WIDTH) {
+      enemy.direction *= -1; // Reverse direction
+    }
+  }
+}
+
+// Shooting
 function shootBullet() {
   bullets.push({
     x: player.facingLeft ? player.x - 10 : player.x + player.width - 10, // adjust origin based on facing
@@ -249,6 +307,8 @@ function update(deltaTime) {
     }
   }
 
+  updateEnemies(deltaTime);
+
   if (checkFinish()) {
     gameWon = true;
   }
@@ -296,6 +356,13 @@ function draw() {
     );
   }
 
+  // Draw enemies
+  enemies.forEach((enemy) => {
+    ctx.drawImage(enemy.image, enemy.x, enemy.y, enemy.width, enemy.height);
+    // Log the position of enemies to check if they are visible
+    console.log(`Enemy at: (${enemy.x}, ${enemy.y})`);
+  });
+
   // Draw finish line
   ctx.drawImage(
     finishFlagImage,
@@ -326,9 +393,7 @@ function gameLoop(currentTime) {
   requestAnimationFrame(gameLoop);
 }
 
-player.image.onload = () => {
-  requestAnimationFrame(gameLoop); // Start game only when image is ready
-};
+player.image.onload = () => requestAnimationFrame(gameLoop); // Start game only when image is ready
 
 function resizeCanvas() {
   const aspect = 16 / 9;
