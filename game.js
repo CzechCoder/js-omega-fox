@@ -18,6 +18,7 @@ let lastShotTime = 0;
 let cameraX = 0;
 let lastTime = 0;
 let gameWon = false;
+let gameOver = false;
 
 // Level
 const level = [
@@ -81,52 +82,64 @@ const enemy_type1 = {
   height: 193,
 };
 
-const enemies = [
-  {
-    x: 500,
-    y: VIRTUAL_HEIGHT - 242,
-    ...enemy_type1,
-    speed: 1, // Speed of enemy movement
-    direction: 1, // 1 for moving right, -1 for moving left
-    image: enemyImage,
-    alive: true,
-    exploding: false,
-    explosionTimer: 0,
-  },
-  {
-    x: 1000,
-    y: VIRTUAL_HEIGHT - 242,
-    ...enemy_type1,
-    speed: 1,
-    direction: -1,
-    image: enemyImage,
-    alive: true,
-    exploding: false,
-    explosionTimer: 0,
-  },
-  {
-    x: 1300,
-    y: VIRTUAL_HEIGHT - 242,
-    ...enemy_type1,
-    speed: 1,
-    direction: -1,
-    image: enemyImage,
-    alive: true,
-    exploding: false,
-    explosionTimer: 0,
-  },
-  {
-    x: 1800,
-    y: VIRTUAL_HEIGHT - 242,
-    ...enemy_type1,
-    speed: 1,
-    direction: -1,
-    image: enemyImage,
-    alive: true,
-    exploding: false,
-    explosionTimer: 0,
-  },
-];
+function createEnemies() {
+  return [
+    {
+      x: 500,
+      y: VIRTUAL_HEIGHT - 242,
+      startX: 500,
+      endX: 800,
+      ...enemy_type1,
+      speed: 4,
+      direction: 1,
+      image: enemyImage,
+      alive: true,
+      exploding: false,
+      explosionTimer: 0,
+    },
+    {
+      x: 1000,
+      y: VIRTUAL_HEIGHT - 242,
+      ...enemy_type1,
+      startX: 900,
+      endX: 1300,
+      speed: 4,
+      direction: -1,
+      image: enemyImage,
+      alive: true,
+      exploding: false,
+      explosionTimer: 0,
+    },
+    {
+      x: 1500,
+      y: VIRTUAL_HEIGHT - 242,
+      ...enemy_type1,
+      startX: 1400,
+      endX: 1850,
+      speed: 4,
+      direction: -1,
+      image: enemyImage,
+      alive: true,
+      exploding: false,
+      explosionTimer: 0,
+    },
+    {
+      x: 1900,
+      y: VIRTUAL_HEIGHT - 242,
+      ...enemy_type1,
+      startX: 1850,
+      endX: 2500,
+      speed: 4,
+      direction: -1,
+      image: enemyImage,
+      alive: true,
+      exploding: false,
+      explosionTimer: 0,
+    },
+  ];
+}
+
+let enemies = createEnemies();
 
 const finishPoint = {
   x: 2800, // Change to your desired x-coordinate
@@ -153,16 +166,15 @@ window.addEventListener("keydown", (e) => {
   }
 
   if (e.key === "r") {
-    if (gameWon) {
-      // Reset game variables
+    if (gameWon || gameOver) {
+      gameOver = false;
       gameWon = false;
       player.x = 100; // Reset player position
       player.y = VIRTUAL_HEIGHT - 150;
       player.vy = 0;
       player.image = playerIdleImage;
-      // Reset other game state variables if necessary
-      bullets.length = 0; // Clear bullets
-      // Reload or reset level data if needed
+      bullets.length = 0;
+      enemies = createEnemies();
     }
   }
 });
@@ -183,6 +195,9 @@ function updateEnemies(deltaTime) {
         enemy.alive = false;
         enemy.image = enemyGravestoneImage;
         enemy.speed = 0; // stop moving
+        enemy.width = 85;
+        enemy.height = 93;
+        enemy.y = VIRTUAL_HEIGHT - 140;
       }
       continue; // skip movement while exploding
     }
@@ -190,8 +205,12 @@ function updateEnemies(deltaTime) {
     // Normal movement
     enemy.x += enemy.speed * enemy.direction * deltaTime * 60;
 
-    if (enemy.x <= 0 || enemy.x + enemy.width >= VIRTUAL_WIDTH) {
-      enemy.direction *= -1;
+    if (enemy.x < enemy.startX) {
+      enemy.x = enemy.startX;
+      enemy.direction = 1;
+    } else if (enemy.x + enemy.width > enemy.endX) {
+      enemy.x = enemy.endX - enemy.width;
+      enemy.direction = -1;
     }
   }
 }
@@ -200,7 +219,7 @@ function updateEnemies(deltaTime) {
 function shootBullet() {
   bullets.push({
     x: player.facingLeft ? player.x - 10 : player.x + player.width - 10, // adjust origin based on facing
-    y: player.y + player.height / 2 - 38,
+    y: player.y + player.height / 2 - 25,
     width: 20,
     height: 10,
     color: "orange",
@@ -230,7 +249,6 @@ function checkFinish() {
   return false;
 }
 
-// Draw the pause menu
 function drawGameOver() {
   ctx.fillStyle = "rgba(0, 0, 0, 0.7)"; // Dark overlay
   ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
@@ -244,9 +262,22 @@ function drawGameOver() {
   );
 }
 
+function drawDeathScreen() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+  ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+  ctx.fillStyle = "white";
+  ctx.font = "48px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "You died! Press R to restart.",
+    VIRTUAL_WIDTH / 2,
+    VIRTUAL_HEIGHT / 2
+  );
+}
+
 // Running mechanics
 function update(deltaTime) {
-  if (gameWon) {
+  if (gameWon || gameOver) {
     return;
   }
 
@@ -367,6 +398,21 @@ function update(deltaTime) {
   if (checkFinish()) {
     gameWon = true;
   }
+
+  // Check if player touches any alive enemy
+  for (let enemy of enemies) {
+    if (
+      enemy.alive &&
+      !enemy.exploding &&
+      player.x < enemy.x + enemy.width &&
+      player.x + player.width > enemy.x &&
+      player.y < enemy.y + enemy.height &&
+      player.y + player.height > enemy.y
+    ) {
+      gameOver = true;
+      break;
+    }
+  }
 }
 
 function draw() {
@@ -413,9 +459,13 @@ function draw() {
 
   // Draw enemies
   enemies.forEach((enemy) => {
-    ctx.drawImage(enemy.image, enemy.x, enemy.y, enemy.width, enemy.height);
-    // Log the position of enemies to check if they are visible
-    console.log(`Enemy at: (${enemy.x}, ${enemy.y})`);
+    ctx.drawImage(
+      enemy.image,
+      Math.round(enemy.x),
+      enemy.y,
+      enemy.width,
+      enemy.height
+    );
   });
 
   // Draw finish line
@@ -444,6 +494,7 @@ function gameLoop(currentTime) {
   draw();
 
   if (gameWon) drawGameOver();
+  if (gameOver) drawDeathScreen();
 
   requestAnimationFrame(gameLoop);
 }
