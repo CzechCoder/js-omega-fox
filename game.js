@@ -53,6 +53,12 @@ playerWalkImage.src = "image/player_walk1.png";
 const enemyImage = new Image();
 enemyImage.src = "image/enemy_robot1.png";
 
+const enemyExplosionImage = new Image();
+enemyExplosionImage.src = "image/explosion.png";
+
+const enemyGravestoneImage = new Image();
+enemyGravestoneImage.src = "image/gravestone.png";
+
 // Player
 const player = {
   x: 100,
@@ -83,6 +89,9 @@ const enemies = [
     speed: 1, // Speed of enemy movement
     direction: 1, // 1 for moving right, -1 for moving left
     image: enemyImage,
+    alive: true,
+    exploding: false,
+    explosionTimer: 0,
   },
   {
     x: 1000,
@@ -91,6 +100,9 @@ const enemies = [
     speed: 1,
     direction: -1,
     image: enemyImage,
+    alive: true,
+    exploding: false,
+    explosionTimer: 0,
   },
   {
     x: 1300,
@@ -99,6 +111,9 @@ const enemies = [
     speed: 1,
     direction: -1,
     image: enemyImage,
+    alive: true,
+    exploding: false,
+    explosionTimer: 0,
   },
   {
     x: 1800,
@@ -107,6 +122,9 @@ const enemies = [
     speed: 1,
     direction: -1,
     image: enemyImage,
+    alive: true,
+    exploding: false,
+    explosionTimer: 0,
   },
 ];
 
@@ -156,11 +174,24 @@ window.addEventListener("keyup", (e) => (keys[e.key] = false));
 // Update enemies (simple walking back and forth)
 function updateEnemies(deltaTime) {
   for (let enemy of enemies) {
-    enemy.x += enemy.speed * enemy.direction * deltaTime * 60; // Move the enemy
+    if (!enemy.alive) continue;
 
-    // Check for boundary and change direction
+    if (enemy.exploding) {
+      enemy.explosionTimer -= deltaTime;
+      if (enemy.explosionTimer <= 0) {
+        enemy.exploding = false;
+        enemy.alive = false;
+        enemy.image = enemyGravestoneImage;
+        enemy.speed = 0; // stop moving
+      }
+      continue; // skip movement while exploding
+    }
+
+    // Normal movement
+    enemy.x += enemy.speed * enemy.direction * deltaTime * 60;
+
     if (enemy.x <= 0 || enemy.x + enemy.width >= VIRTUAL_WIDTH) {
-      enemy.direction *= -1; // Reverse direction
+      enemy.direction *= -1;
     }
   }
 }
@@ -304,6 +335,30 @@ function update(deltaTime) {
       bullets[i].x + bullets[i].width < cameraX
     ) {
       bullets.splice(i, 1);
+    }
+  }
+
+  // Bullet-enemy collision
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    for (let j = 0; j < enemies.length; j++) {
+      const enemy = enemies[j];
+      if (
+        enemy.alive &&
+        !enemy.exploding &&
+        b.x < enemy.x + enemy.width &&
+        b.x + b.width > enemy.x &&
+        b.y < enemy.y + enemy.height &&
+        b.y + b.height > enemy.y
+      ) {
+        // Bullet hits enemy
+        enemy.exploding = true;
+        enemy.explosionTimer = 0.3; // 0.3 seconds of explosion
+        enemy.image = enemyExplosionImage;
+
+        bullets.splice(i, 1); // Remove bullet
+        break;
+      }
     }
   }
 
