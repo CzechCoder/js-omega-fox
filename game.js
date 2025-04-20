@@ -17,31 +17,19 @@ let canShoot = true;
 let lastShotTime = 0;
 let cameraX = 0;
 let lastTime = 0;
+let gameWon = false;
 
 // Level
 const level = [
-  { x: 0, y: VIRTUAL_HEIGHT - 50, width: 2000, height: 50 }, // ground
+  { x: 0, y: VIRTUAL_HEIGHT - 50, width: 3000, height: 50 }, // ground
   { x: 400, y: VIRTUAL_HEIGHT - 150, width: 200, height: 20 }, // platform
   { x: 800, y: VIRTUAL_HEIGHT - 250, width: 200, height: 20 },
   { x: 1200, y: VIRTUAL_HEIGHT - 350, width: 200, height: 20 },
+  { x: 1600, y: VIRTUAL_HEIGHT - 200, width: 200, height: 20 },
 ];
 
-// Player
-const player = {
-  x: 100,
-  y: VIRTUAL_HEIGHT - 150,
-  width: 205,
-  height: 191,
-  speed: 4,
-  vy: 0,
-  jumpForce: 15,
-  gravity: 0.6,
-  grounded: false,
-  color: "#3ab0ff",
-};
-
-const playerImage = new Image();
-playerImage.src = "image/player.png";
+const playerIdleImage = new Image();
+playerIdleImage.src = "image/player.png";
 
 const playerJumpImage = new Image();
 playerJumpImage.src = "image/player_jump.png";
@@ -49,12 +37,41 @@ playerJumpImage.src = "image/player_jump.png";
 const treesImage = new Image();
 treesImage.src = "image/bg_trees.png";
 
+const finishFlagImage = new Image();
+finishFlagImage.src = "image/finish_flag.png"; // Replace with your image path
+
 // Tiles
 const groundTile = new Image();
 groundTile.src = "image/tile_ground.png";
 
 const platformTile = new Image();
 platformTile.src = "image/tile_platform.png";
+
+const playerWalkImage = new Image();
+playerWalkImage.src = "image/player_walk1.png";
+
+// Player
+const player = {
+  x: 100,
+  y: VIRTUAL_HEIGHT - 150,
+  width: 205,
+  height: 191,
+  speed: 6,
+  vy: 0,
+  jumpForce: 19,
+  gravity: 0.7,
+  grounded: false,
+  color: "#3ab0ff",
+  facingLeft: false,
+  image: playerIdleImage,
+};
+
+const finishPoint = {
+  x: 2800, // Change to your desired x-coordinate
+  y: VIRTUAL_HEIGHT - 282, // Adjust to match the ground level
+  width: 114, // Set the width of the flag image
+  height: 235, // Set the height of the flag image
+};
 
 // Controls
 window.addEventListener("keydown", (e) => {
@@ -72,6 +89,20 @@ window.addEventListener("keydown", (e) => {
       }, shootCooldown);
     }
   }
+
+  if (e.key === "r") {
+    if (gameWon) {
+      // Reset game variables
+      gameWon = false;
+      player.x = 100; // Reset player position
+      player.y = VIRTUAL_HEIGHT - 150;
+      player.vy = 0;
+      player.image = playerIdleImage;
+      // Reset other game state variables if necessary
+      bullets.length = 0; // Clear bullets
+      // Reload or reset level data if needed
+    }
+  }
 });
 
 window.addEventListener("keyup", (e) => (keys[e.key] = false));
@@ -79,17 +110,57 @@ window.addEventListener("keyup", (e) => (keys[e.key] = false));
 // Functions
 function shootBullet() {
   bullets.push({
-    x: player.x + player.width - 10, // from near the gun
+    x: player.facingLeft ? player.x - 10 : player.x + player.width - 10, // adjust origin based on facing
     y: player.y + player.height / 2 - 38,
     width: 20,
     height: 10,
     color: "orange",
     speed: bulletSpeed,
+    direction: player.facingLeft ? -1 : 1, // NEW: direction
   });
+}
+
+// Is finish?
+// Check if player reaches the finish point
+function checkFinish() {
+  const flagX = finishPoint.x;
+  const flagY = finishPoint.y;
+  const flagWidth = finishPoint.width;
+  const flagHeight = finishPoint.height;
+
+  if (
+    player.x + player.width > flagX &&
+    player.x < flagX + flagWidth &&
+    player.y + player.height > flagY &&
+    player.y < flagY + flagHeight
+  ) {
+    // Player has reached the finish point
+    return true;
+  }
+
+  return false;
+}
+
+// Draw the pause menu
+function drawGameOver() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.7)"; // Dark overlay
+  ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+  ctx.fillStyle = "white"; // Text color
+  ctx.font = "48px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    "You win! Press R to restart the game.",
+    VIRTUAL_WIDTH / 2,
+    VIRTUAL_HEIGHT / 2
+  );
 }
 
 // Running mechanics
 function update(deltaTime) {
+  if (gameWon) {
+    return;
+  }
+
   // Center camera on player
   cameraX = player.x - VIRTUAL_WIDTH / 2;
   if (cameraX < 0) cameraX = 0;
@@ -99,17 +170,21 @@ function update(deltaTime) {
   // Horizontal movement
   if (keys["ArrowLeft"]) {
     player.x -= moveSpeed;
+    player.facingLeft = true;
   }
   if (keys["ArrowRight"]) {
     player.x += moveSpeed;
+    player.facingLeft = false;
   }
+
+  const isWalking = keys["ArrowLeft"] || keys["ArrowRight"];
+
   if (player.x < 0) player.x = 0; // Prevent going off screen
 
   // Jumping
   if (keys["ArrowUp"] && player.grounded) {
     player.vy = -player.jumpForce;
     player.grounded = false;
-    playerImage.src = playerJumpImage.src; // Change to jump image
 
     for (let plat of level) {
       if (
@@ -152,9 +227,18 @@ function update(deltaTime) {
     player.grounded = true;
   }
 
+  // Update frame
+  if (player.grounded && !isWalking) {
+    player.image = playerIdleImage;
+  } else if (player.grounded && isWalking) {
+    player.image = playerWalkImage;
+  } else if (!player.grounded) {
+    player.image = playerJumpImage;
+  }
+
   // Update bullets
   for (let i = bullets.length - 1; i >= 0; i--) {
-    bullets[i].x += bullets[i].speed * deltaTime * 60;
+    bullets[i].x += bullets[i].speed * bullets[i].direction * deltaTime * 60;
 
     // Remove bullets that have left the visible screen (with camera)
     if (
@@ -164,11 +248,16 @@ function update(deltaTime) {
       bullets.splice(i, 1);
     }
   }
+
+  if (checkFinish()) {
+    gameWon = true;
+  }
 }
 
 function draw() {
   ctx.clearRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
+  // Draw background
   ctx.fillStyle = "#a0d8f1"; // Light blue sky color
   ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
 
@@ -186,7 +275,35 @@ function draw() {
   });
 
   // Draw player
-  ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
+  if (player.facingLeft) {
+    ctx.save();
+    ctx.scale(-1, 1); // flip horizontally
+    ctx.drawImage(
+      player.image,
+      -player.x - player.width, // flip x-pos
+      player.y,
+      player.width,
+      player.height
+    );
+    ctx.restore();
+  } else {
+    ctx.drawImage(
+      player.image,
+      player.x,
+      player.y,
+      player.width,
+      player.height
+    );
+  }
+
+  // Draw finish line
+  ctx.drawImage(
+    finishFlagImage,
+    finishPoint.x,
+    finishPoint.y,
+    finishPoint.width,
+    finishPoint.height
+  );
 
   // Draw bullets
   bullets.forEach((b) => {
@@ -204,10 +321,12 @@ function gameLoop(currentTime) {
   update(deltaTime);
   draw();
 
+  if (gameWon) drawGameOver();
+
   requestAnimationFrame(gameLoop);
 }
 
-playerImage.onload = () => {
+player.image.onload = () => {
   requestAnimationFrame(gameLoop); // Start game only when image is ready
 };
 
